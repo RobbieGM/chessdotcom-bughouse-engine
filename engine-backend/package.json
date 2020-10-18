@@ -1,0 +1,22 @@
+{
+  "name": "engine-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobbieGM/chessdotcom-bughouse-engine.git"
+  },
+  "author": "Robbie Moore",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RobbieGM/chessdotcom-bughouse-engine/issues"
+  },
+  "homepage": "https://github.com/RobbieGM/chessdotcom-bughouse-engine#readme",
+  "dependencies": {
+    "ws": "^7.3.1"
+  }
+}
