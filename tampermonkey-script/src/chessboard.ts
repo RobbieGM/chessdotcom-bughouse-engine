@@ -46,7 +46,8 @@ export function algebraicMoveToChesscom(algebraicMove: string): string {
   }
   if (isPromotion) {
     const promoteTo = algebraicMove.charAt(4).toLowerCase();
-    const direction = parseInt(to.charAt(1)) - parseInt(from.charAt(1));
+    const direction =
+      "abcdefgh".indexOf(to.charAt(0)) - "abcdefgh".indexOf(from.charAt(0));
     const [promotionCharacter] = Object.entries(PROMOTION_CHARACTERS).find(
       ([, value]) => value.direction === direction && value.to === promoteTo
     )!;
