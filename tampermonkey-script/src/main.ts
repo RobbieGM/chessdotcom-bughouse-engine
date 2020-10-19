@@ -11,6 +11,7 @@
 
 import { getFEN, algebraicMoveToChesscom } from "./chessboard";
 import Engine from "./engine";
+import GUI from "./gui";
 
 declare global {
   interface Window {
@@ -45,6 +46,26 @@ interface Player {
     };
   })();
   const engine = new Engine();
+  const gui = new GUI();
+  let sitting = false;
+  gui.events.subscribe(
+    "sittingstatuschange",
+    (newSitting) => (sitting = newSitting)
+  );
+  function waitToStopSitting() {
+    if (!sitting) return Promise.resolve();
+    return new Promise<void>((res) => {
+      const { unsubscribe } = gui.events.subscribe(
+        "sittingstatuschange",
+        (s) => {
+          if (!s) {
+            res();
+            unsubscribe();
+          }
+        }
+      );
+    });
+  }
   window.OriginalWebSocket = window.WebSocket;
   const websockets: WebSocket[] = [];
   window.WebSocket = new Proxy(WebSocket, {
@@ -131,6 +152,7 @@ interface Player {
     console.debug("Opponent moved received. FEN", fen);
     engine.setFen(fen);
     const bestMove = await engine.calculateBestMove();
+    await waitToStopSitting();
     console.debug("Playing", bestMove);
     sendMove(socket, algebraicMoveToChesscom(bestMove), ply);
   }
