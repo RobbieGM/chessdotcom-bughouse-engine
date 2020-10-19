@@ -151,8 +151,8 @@ interface Player {
     const fen = getFEN(moves, hand);
     console.debug("Opponent moved received. FEN", fen);
     engine.setFen(fen);
-    const bestMove = await engine.calculateBestMove();
     await waitToStopSitting();
+    const bestMove = await engine.calculateBestMove();
     console.debug("Playing", bestMove);
     sendMove(socket, algebraicMoveToChesscom(bestMove), ply);
   }
