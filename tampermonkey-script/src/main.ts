@@ -11,7 +11,8 @@
 
 import { getFEN, algebraicMoveToChesscom } from "./chessboard";
 import Engine from "./engine";
-import GUI from "./gui";
+import GUI, { ExpectedPiecesMap } from "./gui";
+import OpeningBook from "./opening-book";
 
 declare global {
   interface Window {
@@ -36,8 +37,29 @@ interface Player {
 (function () {
   "use strict";
   console.log("Bughouse engine userscript initialized");
+  const book = new OpeningBook();
   let clientId = "";
   let username = "";
+  ondragover = ondragenter = (e) => e.preventDefault();
+  ondrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files[0];
+    if (file == null) {
+      alert("Please provide a file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsText(file);
+    reader.onload = (loadEvent) => {
+      if (!reader.result || typeof reader.result === "object") {
+        alert("Failed to load file--is the file empty?");
+        return;
+      }
+      localStorage.setItem("openingBook", reader.result);
+      book.reload();
+      alert(`Loaded book "${file.name}" successfully.`);
+    };
+  };
   const nextMessageId = (() => {
     let messageId = 100000;
     return () => {
@@ -48,9 +70,20 @@ interface Player {
   const engine = new Engine();
   const gui = new GUI();
   let sitting = false;
+  let expectedPieces: ExpectedPiecesMap = {
+    p: true,
+    n: false,
+    b: false,
+    r: false,
+    q: false,
+  };
   gui.events.subscribe(
     "sittingstatuschange",
     (newSitting) => (sitting = newSitting)
+  );
+  gui.events.subscribe(
+    "expectedpieceschange",
+    (newExpectedPieces) => (expectedPieces = newExpectedPieces)
   );
   function waitToStopSitting() {
     if (!sitting) return Promise.resolve();
@@ -129,14 +162,25 @@ interface Player {
               socket,
               data.data.game.moves as string,
               hand,
+              userSide,
               data.data.game.seq as number
             );
           } else {
-            onMyMove(data.data.game.moves as string, hand);
+            onMyMove(data.data.game.moves as string, hand, userSide);
           }
         }
       }
     }
+  }
+  function getExpectedHandAddition(myColor: "white" | "black") {
+    const colorAmbiguousExpectedHandAddition = (Object.keys(
+      expectedPieces
+    ) as Array<keyof ExpectedPiecesMap>)
+      .filter((key) => expectedPieces[key])
+      .join("");
+    return myColor == "white"
+      ? colorAmbiguousExpectedHandAddition.toLowerCase()
+      : colorAmbiguousExpectedHandAddition.toUpperCase();
   }
   /**
    * @param moves Moves in chess.com format
@@ -146,19 +190,31 @@ interface Player {
     socket: WebSocket,
     moves: string,
     hand: string,
+    myColor: "white" | "black",
     ply: number
   ) {
-    const fen = getFEN(moves, hand);
+    const handWithExpectedPiecesForOpponent =
+      hand + getExpectedHandAddition(myColor);
+    const fen = getFEN(moves, handWithExpectedPiecesForOpponent);
     console.debug("Opponent moved received. FEN", fen);
+    const bookMove = book.getOpeningMove(fen);
+    if (bookMove) {
+      console.debug("Playing book move", bookMove);
+      sendMove(socket, algebraicMoveToChesscom(bookMove), ply);
+      return;
+    }
     engine.setFen(fen);
+    // TODO hand could update during sit and engine wouldn't know
     await waitToStopSitting();
     const bestMove = await engine.calculateBestMove();
     console.debug("Playing", bestMove);
     sendMove(socket, algebraicMoveToChesscom(bestMove), ply);
   }
 
-  function onMyMove(moves: string, hand: string) {
-    const fen = getFEN(moves, hand);
+  function onMyMove(moves: string, hand: string, myColor: "white" | "black") {
+    const handWithExpectedPiecesForOpponent =
+      hand + getExpectedHandAddition(myColor);
+    const fen = getFEN(moves, handWithExpectedPiecesForOpponent);
     console.debug("Own move received. FEN", fen);
     engine.setFen(fen);
     engine.startPondering();

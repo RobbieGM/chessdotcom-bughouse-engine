@@ -1,7 +1,7 @@
 import Chess, { ChessInstance, Square } from "chess.js";
 import type { Chess as ChessType } from "chess.js";
 
-type NonKingPiece = "p" | "n" | "b" | "r" | "q";
+export type NonKingPiece = "p" | "n" | "b" | "r" | "q";
 
 /** Characters */
 const SQUARE_CHARACTERS =

@@ -37,23 +37,14 @@ export default class Engine {
       const onMessage = ({ data }: MessageEvent<any>) => {
         if (typeof data != "string") return;
         const lines = data.split("\r\n");
-        console.debug("Received", lines);
         const bestMoveLine = lines.find((line) => line.startsWith("bestmove"));
         if (bestMoveLine == null) return;
-        console.debug(
-          "Line containing best move",
-          JSON.stringify(bestMoveLine)
-        );
         const bestMove = bestMoveLine.split(" ")[1];
         if (wasPondering) {
           if (receivedBestMoveCommandFromPondering) {
             resolveBestMove(bestMove);
-          } else
-            console.debug(
-              "Ignoring best move",
-              bestMove,
-              "since it came from pondering"
-            );
+          }
+          // Else ignore best move since it came from pondering
           receivedBestMoveCommandFromPondering = true;
         } else {
           resolveBestMove(bestMove);
